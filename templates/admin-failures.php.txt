@@ -1,0 +1,153 @@
+<?php
+/**
+ * Admin Failures Overview Template
+ */
+
+if (!defined('ABSPATH')) {
+    exit;
+}
+
+$periods = get_option('pam_periods', array());
+$current_period = isset($_GET['period']) ? intval($_GET['period']) : null;
+?>
+
+<div class="wrap pam-admin-wrap">
+    <h1 class="pam-admin-title">
+        <span class="dashicons dashicons-warning"></span>
+        <?php _e('Leerlingen met Onvoldoendes', 'periode-actieplan'); ?>
+    </h1>
+    
+    <div class="pam-failures-header">
+        <p class="description">
+            <?php _e('Overzicht van leerlingen met 2 of meer onvoldoendes in de geselecteerde periode.', 'periode-actieplan'); ?>
+        </p>
+        
+        <div class="pam-period-filter">
+            <label><?php _e('Filter op periode:', 'periode-actieplan'); ?></label>
+            <select id="pam-period-filter" onchange="window.location.href='<?php echo admin_url('admin.php?page=pam-failures&period='); ?>' + this.value">
+                <option value=""><?php _e('Laatste ingevoerde periode', 'periode-actieplan'); ?></option>
+                <?php foreach ($periods as $index => $period): ?>
+                    <option value="<?php echo ($index + 1); ?>" <?php selected($current_period, $index + 1); ?>>
+                        <?php echo esc_html($period['name']); ?>
+                    </option>
+                <?php endforeach; ?>
+            </select>
+        </div>
+    </div>
+    
+    <?php if (empty($students_with_failures)): ?>
+        <div class="pam-empty-state pam-success-state">
+            <span class="dashicons dashicons-smiley"></span>
+            <h2><?php _e('Geen leerlingen met 2+ onvoldoendes!', 'periode-actieplan'); ?></h2>
+            <p><?php _e('Alle leerlingen presteren goed of hebben maximaal 1 onvoldoende.', 'periode-actieplan'); ?></p>
+        </div>
+    <?php else: ?>
+        
+        <div class="pam-export-section">
+            <a href="<?php echo wp_nonce_url(admin_url('admin-post.php?action=pam_export_excel' . ($current_period ? '&period=' . $current_period : '')), 'pam_export_excel'); ?>" class="button">
+                <span class="dashicons dashicons-media-spreadsheet"></span>
+                <?php _e('Exporteer naar Excel', 'periode-actieplan'); ?>
+            </a>
+        </div>
+        
+        <table class="wp-list-table widefat fixed striped pam-failures-table">
+            <thead>
+                <tr>
+                    <th><?php _e('Leerling', 'periode-actieplan'); ?></th>
+                    <th><?php _e('Klas', 'periode-actieplan'); ?></th>
+                    <th><?php _e('Periode', 'periode-actieplan'); ?></th>
+                    <th><?php _e('Aantal Onvoldoendes', 'periode-actieplan'); ?></th>
+                    <th><?php _e('Onvoldoende Vakken', 'periode-actieplan'); ?></th>
+                    <th><?php _e('Mentor(en)', 'periode-actieplan'); ?></th>
+                    <th><?php _e('Acties', 'periode-actieplan'); ?></th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php foreach ($students_with_failures as $student): 
+                    $period_name = isset($periods[$student['period_number'] - 1]['name']) ? $periods[$student['period_number'] - 1]['name'] : 'Periode ' . $student['period_number'];
+                    
+                    $mentor_names = array();
+                    if ($student['mentor_1']) {
+                        $m1 = get_userdata($student['mentor_1']);
+                        if ($m1) $mentor_names[] = $m1->display_name;
+                    }
+                    if ($student['mentor_2']) {
+                        $m2 = get_userdata($student['mentor_2']);
+                        if ($m2) $mentor_names[] = $m2->display_name;
+                    }
+                    
+                    // Determine severity
+                    $severity_class = '';
+                    if ($student['failure_count'] >= 5) {
+                        $severity_class = 'pam-severity-critical';
+                    } elseif ($student['failure_count'] >= 3) {
+                        $severity_class = 'pam-severity-high';
+                    } else {
+                        $severity_class = 'pam-severity-medium';
+                    }
+                ?>
+                    <tr class="<?php echo esc_attr($severity_class); ?>">
+                        <td>
+                            <strong><?php echo esc_html($student['name']); ?></strong>
+                            <div class="row-actions">
+                                <span><a href="mailto:<?php echo esc_attr($student['email']); ?>"><?php echo esc_html($student['email']); ?></a></span>
+                            </div>
+                        </td>
+                        <td><?php echo esc_html($student['class_name'] ?? '-'); ?></td>
+                        <td><?php echo esc_html($period_name); ?></td>
+                        <td>
+                            <span class="pam-failure-badge">
+                                <span class="dashicons dashicons-warning"></span>
+                                <?php echo esc_html($student['failure_count']); ?>
+                            </span>
+                        </td>
+                        <td>
+                            <div class="pam-failing-subjects">
+                                <?php foreach ($student['failing_subjects'] as $subject): ?>
+                                    <span class="pam-subject-tag">
+                                        <?php echo esc_html($subject['subject']); ?>
+                                        <em>(<?php echo number_format($subject['grade'], 1, ',', ''); ?>)</em>
+                                    </span>
+                                <?php endforeach; ?>
+                            </div>
+                        </td>
+                        <td>
+                            <?php if (!empty($mentor_names)): ?>
+                                <?php echo esc_html(implode(', ', $mentor_names)); ?>
+                            <?php else: ?>
+                                <span class="pam-no-mentor">
+                                    <span class="dashicons dashicons-warning"></span>
+                                    <?php _e('Geen mentor', 'periode-actieplan'); ?>
+                                </span>
+                            <?php endif; ?>
+                        </td>
+                        <td>
+                            <a href="<?php echo admin_url('admin.php?page=pam-students&student=' . $student['user_id']); ?>" class="button button-small">
+                                <?php _e('Details', 'periode-actieplan'); ?>
+                            </a>
+                        </td>
+                    </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
+        
+        <div class="pam-legend">
+            <h3><?php _e('Severity Legenda', 'periode-actieplan'); ?></h3>
+            <div class="pam-legend-items">
+                <div class="pam-legend-item">
+                    <span class="pam-legend-color pam-severity-medium"></span>
+                    <span>2 onvoldoendes</span>
+                </div>
+                <div class="pam-legend-item">
+                    <span class="pam-legend-color pam-severity-high"></span>
+                    <span>3-4 onvoldoendes</span>
+                </div>
+                <div class="pam-legend-item">
+                    <span class="pam-legend-color pam-severity-critical"></span>
+                    <span>5+ onvoldoendes</span>
+                </div>
+            </div>
+        </div>
+        
+    <?php endif; ?>
+</div>

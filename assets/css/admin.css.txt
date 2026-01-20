@@ -1,0 +1,918 @@
+/* Periode Actieplan Mentorlessen - Admin Styles */
+
+.pam-admin-wrap {
+    margin: 20px 20px 0 0;
+}
+
+.pam-admin-title {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 23px;
+    font-weight: 400;
+    margin: 0 0 20px;
+    padding: 0;
+    line-height: 1.3;
+}
+
+.pam-admin-title .dashicons {
+    font-size: 28px;
+    width: 28px;
+    height: 28px;
+    color: #667eea;
+}
+
+/* Dashboard */
+.pam-dashboard-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 30px;
+}
+
+.pam-active-period {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 16px;
+}
+
+.pam-active-period .dashicons {
+    font-size: 24px;
+    width: 24px;
+    height: 24px;
+}
+
+.pam-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 20px;
+    margin-bottom: 30px;
+}
+
+.pam-stat-card {
+    background: white;
+    border-radius: 8px;
+    padding: 20px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    border-left: 4px solid #667eea;
+}
+
+.pam-stat-card.pam-stat-success {
+    border-left-color: #00b894;
+}
+
+.pam-stat-card.pam-stat-warning {
+    border-left-color: #fdcb6e;
+}
+
+.pam-stat-card.pam-stat-info {
+    border-left-color: #74b9ff;
+}
+
+.pam-stat-icon {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f0f2f5;
+}
+
+.pam-stat-primary .pam-stat-icon {
+    background: rgba(102, 126, 234, 0.1);
+    color: #667eea;
+}
+
+.pam-stat-success .pam-stat-icon {
+    background: rgba(0, 184, 148, 0.1);
+    color: #00b894;
+}
+
+.pam-stat-warning .pam-stat-icon {
+    background: rgba(253, 203, 110, 0.1);
+    color: #fdcb6e;
+}
+
+.pam-stat-info .pam-stat-icon {
+    background: rgba(116, 185, 255, 0.1);
+    color: #74b9ff;
+}
+
+.pam-stat-icon .dashicons {
+    font-size: 28px;
+    width: 28px;
+    height: 28px;
+}
+
+.pam-stat-number {
+    font-size: 32px;
+    font-weight: 700;
+    line-height: 1;
+    margin-bottom: 5px;
+}
+
+.pam-stat-label {
+    font-size: 14px;
+    color: #6c757d;
+}
+
+.pam-dashboard-actions {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+    margin-bottom: 30px;
+}
+
+.pam-action-card {
+    background: white;
+    border: 2px solid #e1e4e8;
+    border-radius: 8px;
+    padding: 20px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    text-decoration: none;
+    color: #2c3e50;
+    transition: all 0.2s ease;
+}
+
+.pam-action-card:hover {
+    border-color: #667eea;
+    box-shadow: 0 4px 8px rgba(102, 126, 234, 0.2);
+    transform: translateY(-2px);
+}
+
+.pam-action-card.pam-action-warning:hover {
+    border-color: #fdcb6e;
+    box-shadow: 0 4px 8px rgba(253, 203, 110, 0.2);
+}
+
+.pam-action-card > .dashicons:first-child {
+    font-size: 36px;
+    width: 36px;
+    height: 36px;
+    color: #667eea;
+    flex-shrink: 0;
+}
+
+.pam-action-warning > .dashicons:first-child {
+    color: #fdcb6e;
+}
+
+.pam-action-content {
+    flex: 1;
+}
+
+.pam-action-content h3 {
+    margin: 0 0 5px;
+    font-size: 16px;
+}
+
+.pam-action-content p {
+    margin: 0;
+    font-size: 14px;
+    color: #6c757d;
+}
+
+.pam-action-card > .dashicons:last-child {
+    font-size: 24px;
+    width: 24px;
+    height: 24px;
+    color: #adb5bd;
+}
+
+/* Notices */
+.pam-notice {
+    background: white;
+    border-left: 4px solid #667eea;
+    padding: 20px;
+    border-radius: 0 8px 8px 0;
+    display: flex;
+    gap: 15px;
+    margin: 20px 0;
+}
+
+.pam-notice.pam-notice-warning {
+    border-left-color: #fdcb6e;
+}
+
+.pam-notice > .dashicons {
+    font-size: 24px;
+    width: 24px;
+    height: 24px;
+    color: #667eea;
+    flex-shrink: 0;
+}
+
+.pam-notice.pam-notice-warning > .dashicons {
+    color: #fdcb6e;
+}
+
+.pam-notice h3 {
+    margin: 0 0 10px;
+}
+
+.pam-notice p {
+    margin: 0 0 15px;
+}
+
+/* Help Section */
+.pam-help-section {
+    background: white;
+    border: 1px solid #e1e4e8;
+    border-radius: 8px;
+    padding: 30px;
+    margin-top: 30px;
+}
+
+.pam-help-section h2 {
+    margin-top: 0;
+}
+
+.pam-help-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+}
+
+.pam-help-card {
+    text-align: center;
+    padding: 20px;
+}
+
+.pam-help-number {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 50px;
+    height: 50px;
+    background: #667eea;
+    color: white;
+    border-radius: 50%;
+    font-size: 24px;
+    font-weight: 700;
+    margin-bottom: 15px;
+}
+
+.pam-help-card h4 {
+    margin: 0 0 10px;
+}
+
+.pam-help-card p {
+    margin: 0;
+    font-size: 14px;
+    color: #6c757d;
+}
+
+/* Students List */
+.pam-list-filters {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+
+.pam-search-input,
+.pam-filter-select {
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.pam-search-input {
+    flex: 1;
+    min-width: 250px;
+}
+
+.pam-filter-select {
+    min-width: 200px;
+}
+
+.pam-students-table th {
+    font-weight: 600;
+}
+
+/* Student Detail */
+.pam-detail-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    margin-bottom: 30px;
+    flex-wrap: wrap;
+}
+
+.pam-back-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    text-decoration: none;
+    color: #667eea;
+    font-weight: 600;
+}
+
+.pam-back-button:hover {
+    color: #5568d3;
+}
+
+.pam-export-buttons {
+    display: flex;
+    gap: 10px;
+}
+
+.pam-meta-card {
+    background: white;
+    border: 1px solid #e1e4e8;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 30px;
+}
+
+.pam-meta-card h3 {
+    margin-top: 0;
+}
+
+.pam-form-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+    margin-bottom: 20px;
+}
+
+.pam-form-field label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 8px;
+}
+
+.pam-form-field input,
+.pam-form-field select {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+.pam-save-message {
+    display: inline-block;
+    margin-left: 10px;
+    padding: 5px 15px;
+    border-radius: 4px;
+    font-weight: 600;
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+.pam-save-message.show {
+    opacity: 1;
+}
+
+.pam-save-message.success {
+    background: #d4edda;
+    color: #155724;
+}
+
+.pam-save-message.error {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+/* Period Tabs */
+.pam-period-tabs {
+    background: white;
+    border: 1px solid #e1e4e8;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.pam-tabs-nav {
+    display: flex;
+    border-bottom: 1px solid #e1e4e8;
+    background: #f8f9fa;
+}
+
+.pam-tab-button {
+    flex: 1;
+    padding: 15px 20px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    color: #6c757d;
+    border-bottom: 3px solid transparent;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.pam-tab-button:hover {
+    background: rgba(102, 126, 234, 0.05);
+    color: #667eea;
+}
+
+.pam-tab-button.active {
+    color: #667eea;
+    background: white;
+    border-bottom-color: #667eea;
+}
+
+.pam-tab-button.pam-tab-empty {
+    opacity: 0.5;
+}
+
+.pam-tab-badge {
+    background: #667eea;
+    color: white;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 12px;
+}
+
+.pam-tabs-content {
+    padding: 30px;
+}
+
+.pam-tab-panel {
+    display: none;
+}
+
+.pam-tab-panel.active {
+    display: block;
+}
+
+.pam-empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: #6c757d;
+}
+
+.pam-empty-state.pam-success-state {
+    color: #00b894;
+}
+
+.pam-empty-state .dashicons {
+    font-size: 64px;
+    width: 64px;
+    height: 64px;
+    margin-bottom: 20px;
+    opacity: 0.5;
+}
+
+.pam-period-status {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    padding: 15px;
+    background: #f8f9fa;
+    border-radius: 8px;
+}
+
+.pam-status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: 14px;
+}
+
+.pam-status-badge.pam-status-closed {
+    background: #e9ecef;
+    color: #495057;
+}
+
+.pam-status-badge.pam-status-open {
+    background: #d4edda;
+    color: #155724;
+}
+
+/* Grades Table */
+.pam-grades-table-wrapper {
+    margin-bottom: 30px;
+}
+
+.pam-grades-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 15px 0;
+}
+
+.pam-grades-table th,
+.pam-grades-table td {
+    padding: 12px;
+    border: 1px solid #e1e4e8;
+    text-align: left;
+}
+
+.pam-grades-table th {
+    background: #f8f9fa;
+    font-weight: 600;
+}
+
+.pam-grades-table .pam-grade-failure {
+    background: #fff3cd;
+}
+
+.pam-grades-table .pam-grade-value {
+    font-weight: 700;
+    text-align: center;
+}
+
+.pam-grade-failure .pam-grade-value {
+    color: #d63031;
+}
+
+.pam-failure-summary {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background: #fff3cd;
+    border-radius: 20px;
+    color: #856404;
+    font-weight: 600;
+    margin-top: 10px;
+}
+
+/* Improvement Plans */
+.pam-plans-wrapper {
+    margin-bottom: 30px;
+}
+
+.pam-plan-detail {
+    background: linear-gradient(135deg, #ffeaa7 0%, #fdcb6e 100%);
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.pam-plan-detail h4 {
+    margin-top: 0;
+    color: #2d3436;
+}
+
+.pam-plan-qa {
+    background: white;
+    padding: 15px;
+    border-radius: 6px;
+    margin-bottom: 15px;
+}
+
+.pam-plan-qa:last-child {
+    margin-bottom: 0;
+}
+
+.pam-plan-question {
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: #2c3e50;
+}
+
+.pam-plan-answer {
+    color: #495057;
+    line-height: 1.6;
+}
+
+/* Mentor Notes */
+.pam-mentor-notes-wrapper textarea {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-family: inherit;
+    resize: vertical;
+}
+
+/* Failures Page */
+.pam-failures-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+.pam-period-filter {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.pam-export-section {
+    margin-bottom: 20px;
+}
+
+.pam-failures-table .pam-severity-medium {
+    border-left: 4px solid #fdcb6e;
+}
+
+.pam-failures-table .pam-severity-high {
+    border-left: 4px solid #ff7675;
+}
+
+.pam-failures-table .pam-severity-critical {
+    border-left: 4px solid #d63031;
+    background: #fff5f5;
+}
+
+.pam-failure-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: #fff3cd;
+    color: #856404;
+    padding: 5px 12px;
+    border-radius: 15px;
+    font-weight: 700;
+}
+
+.pam-failing-subjects {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.pam-subject-tag {
+    display: inline-block;
+    background: #e9ecef;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 13px;
+}
+
+.pam-subject-tag em {
+    color: #d63031;
+    font-weight: 700;
+    font-style: normal;
+}
+
+.pam-no-mentor {
+    color: #d63031;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.pam-legend {
+    margin-top: 30px;
+    padding: 20px;
+    background: #f8f9fa;
+    border-radius: 8px;
+}
+
+.pam-legend h3 {
+    margin-top: 0;
+}
+
+.pam-legend-items {
+    display: flex;
+    gap: 30px;
+}
+
+.pam-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.pam-legend-color {
+    width: 30px;
+    height: 20px;
+    border-radius: 4px;
+}
+
+.pam-legend-color.pam-severity-medium {
+    background: #fdcb6e;
+}
+
+.pam-legend-color.pam-severity-high {
+    background: #ff7675;
+}
+
+.pam-legend-color.pam-severity-critical {
+    background: #d63031;
+}
+
+/* Settings */
+.pam-settings-content {
+    background: white;
+    border: 1px solid #e1e4e8;
+    border-radius: 0 8px 8px 8px;
+    padding: 30px;
+}
+
+.pam-settings-section h2 {
+    margin-top: 0;
+}
+
+.pam-settings-form {
+    max-width: 800px;
+}
+
+/* Subjects Settings */
+#pam-subjects-list {
+    margin-bottom: 20px;
+}
+
+.pam-subject-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+    background: #f8f9fa;
+    padding: 10px;
+    border-radius: 4px;
+}
+
+.pam-drag-handle {
+    cursor: move;
+    color: #adb5bd;
+}
+
+.pam-subject-item input {
+    flex: 1;
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+.pam-remove-subject {
+    background: #dc3545;
+    color: white;
+    border: none;
+    padding: 8px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.pam-remove-subject:hover {
+    background: #c82333;
+}
+
+/* Periods Settings */
+.pam-periods-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+    margin-bottom: 30px;
+}
+
+.pam-period-card {
+    border: 2px solid #e1e4e8;
+    border-radius: 8px;
+    padding: 20px;
+}
+
+.pam-period-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.pam-period-header h3 {
+    margin: 0;
+    font-size: 16px;
+}
+
+.pam-switch {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.pam-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.pam-slider {
+    position: relative;
+    display: inline-block;
+    width: 50px;
+    height: 24px;
+    background: #ccc;
+    border-radius: 24px;
+    cursor: pointer;
+    transition: background 0.3s;
+}
+
+.pam-slider::before {
+    content: "";
+    position: absolute;
+    height: 18px;
+    width: 18px;
+    left: 3px;
+    bottom: 3px;
+    background: white;
+    border-radius: 50%;
+    transition: transform 0.3s;
+}
+
+.pam-switch input:checked + .pam-slider {
+    background: #00b894;
+}
+
+.pam-switch input:checked + .pam-slider::before {
+    transform: translateX(26px);
+}
+
+.pam-switch-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: #6c757d;
+}
+
+.pam-period-name-input {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+/* Email Settings */
+.pam-placeholders {
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 4px;
+    margin: 15px 0;
+    font-size: 13px;
+    line-height: 1.8;
+}
+
+.pam-placeholders code {
+    background: white;
+    padding: 2px 6px;
+    border-radius: 3px;
+    color: #667eea;
+    font-weight: 600;
+}
+
+/* PDRO Settings */
+.pam-pdro-question {
+    margin-bottom: 20px;
+}
+
+.pam-pdro-question label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+}
+
+.pam-pdro-question textarea {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+/* Form Actions */
+.pam-form-actions {
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 1px solid #e1e4e8;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .pam-stats-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .pam-dashboard-actions {
+        grid-template-columns: 1fr;
+    }
+    
+    .pam-detail-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .pam-tabs-nav {
+        flex-wrap: wrap;
+    }
+    
+    .pam-legend-items {
+        flex-direction: column;
+        gap: 10px;
+    }
+}

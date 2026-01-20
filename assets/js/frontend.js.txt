@@ -1,0 +1,345 @@
+jQuery(document).ready(function($) {
+    'use strict';
+    
+    const PAM = {
+        currentSubjects: [],
+        currentGrades: {},
+        pdroQuestions: [],
+        
+        init: function() {
+            this.bindEvents();
+            this.checkExistingData();
+        },
+        
+        bindEvents: function() {
+            $('#pam-add-subject').on('click', this.addCustomSubject.bind(this));
+            $('input[name="subjects[]"]').on('change', this.updateSubjectList.bind(this));
+            $('#pam-save-grades').on('click', this.saveGrades.bind(this));
+            $('#pam-finalize').on('click', this.finalizePeriod.bind(this));
+            
+            // Auto-save on grade input change (debounced)
+            let gradeTimeout;
+            $(document).on('input', '.pam-grade-input', function() {
+                clearTimeout(gradeTimeout);
+                gradeTimeout = setTimeout(function() {
+                    PAM.autoSave();
+                }, 2000);
+            });
+            
+            // Auto-save on plan textarea change (debounced)
+            let planTimeout;
+            $(document).on('input', '.pam-plan-answer', function() {
+                clearTimeout(planTimeout);
+                planTimeout = setTimeout(function() {
+                    PAM.autoSave();
+                }, 3000);
+            });
+        },
+        
+        addCustomSubject: function(e) {
+            e.preventDefault();
+            const customSubject = $('#pam-custom-subject').val().trim();
+            
+            if (customSubject === '') {
+                this.showMessage('Vul een vaknaam in', 'error');
+                return;
+            }
+            
+            // Add to checkbox list
+            const $grid = $('.pam-subjects-grid');
+            const $label = $('<label class="pam-subject-checkbox">').html(
+                '<input type="checkbox" name="subjects[]" value="' + customSubject + '" checked>' +
+                '<span>' + customSubject + '</span>'
+            );
+            $grid.append($label);
+            
+            // Clear input
+            $('#pam-custom-subject').val('');
+            
+            // Update subject list
+            this.updateSubjectList();
+            
+            this.showMessage('Vak toegevoegd: ' + customSubject, 'success');
+        },
+        
+        updateSubjectList: function() {
+            this.currentSubjects = [];
+            $('input[name="subjects[]"]:checked').each(function() {
+                PAM.currentSubjects.push($(this).val());
+            });
+            
+            if (this.currentSubjects.length > 0) {
+                this.renderGradeFields();
+                $('#pam-grades-section').slideDown();
+            } else {
+                $('#pam-grades-section').slideUp();
+            }
+        },
+        
+        renderGradeFields: function() {
+            const $grid = $('.pam-grades-grid');
+            $grid.empty();
+            
+            this.currentSubjects.forEach(function(subject) {
+                const grade = PAM.currentGrades[subject] || '';
+                const $row = $('<div class="pam-grade-row">').html(
+                    '<label class="pam-grade-label">' +
+                    '<span class="pam-subject-name">' + subject + '</span>' +
+                    '<input type="text" name="grades[' + subject + ']" value="' + grade + '" ' +
+                    'placeholder="-" class="pam-grade-input" data-subject="' + subject + '" ' +
+                    'pattern="^([1-9]|10)([,\\.][0-9])?$|^-$">' +
+                    '</label>'
+                );
+                $grid.append($row);
+            });
+        },
+        
+        checkExistingData: function() {
+            // Check if there are already grades filled in
+            const hasGrades = $('.pam-grade-input').filter(function() {
+                return $(this).val() !== '' && $(this).val() !== '-';
+            }).length > 0;
+            
+            if (hasGrades) {
+                this.validateAndShowPlans();
+            }
+        },
+        
+        saveGrades: function(e) {
+            e.preventDefault();
+            
+            // Collect grades
+            this.currentGrades = {};
+            let hasValues = false;
+            
+            $('.pam-grade-input').each(function() {
+                const subject = $(this).data('subject');
+                const value = $(this).val().trim();
+                if (value !== '') {
+                    PAM.currentGrades[subject] = value;
+                    hasValues = true;
+                }
+            });
+            
+            if (!hasValues) {
+                this.showMessage('Vul minimaal één cijfer in', 'warning');
+                return;
+            }
+            
+            this.showMessage(pamData.texts.saving, 'info');
+            
+            // Save data
+            this.saveData(false, function() {
+                PAM.showMessage(pamData.texts.saved, 'success');
+                PAM.validateAndShowPlans();
+            });
+        },
+        
+        validateAndShowPlans: function() {
+            const failingSubjects = [];
+            
+            $('.pam-grade-input').each(function() {
+                const subject = $(this).data('subject');
+                const value = $(this).val().trim().replace(',', '.');
+                
+                if (value !== '' && value !== '-') {
+                    const grade = parseFloat(value);
+                    if (grade < 6.0) {
+                        failingSubjects.push({
+                            subject: subject,
+                            grade: value
+                        });
+                    }
+                }
+            });
+            
+            if (failingSubjects.length > 0) {
+                this.renderImprovementPlans(failingSubjects);
+                $('#pam-plans-section').slideDown();
+                $('#pam-finalize').slideDown();
+            } else {
+                $('#pam-plans-section').slideUp();
+                $('#pam-finalize').slideDown();
+            }
+        },
+        
+        renderImprovementPlans: function(failingSubjects) {
+            const $container = $('#pam-plans-container');
+            $container.empty();
+            
+            // Get template
+            const template = $('#pam-plan-template').html();
+            
+            // Fetch questions from data attribute or default
+            const questions = [
+                'PLAN - Terugkijken: hoe heb je geleerd voor de laatste toets en wat ging goed / minder goed?',
+                'PLAN - Kies één duidelijk doel (SMART): welk cijfer wil je minimaal halen en op welke toets / in welke periode?',
+                'DO - Wat ga je precies anders doen? Noem minimaal twee concrete acties (wat, wanneer, hoe lang, met welk materiaal).',
+                'REVIEW - Hoe ga je zelf controleren of je plan werkt? (Bijv. oefentoets maken, wekelijkse check in je planner, uitleg vragen aan docent/mentor.)'
+            ];
+            
+            failingSubjects.forEach(function(item) {
+                let html = template.replace(/{{subject}}/g, item.subject)
+                                  .replace(/{{grade}}/g, item.grade);
+                
+                // Render questions
+                let questionsHtml = '';
+                questions.forEach(function(q, index) {
+                    const placeholder = 'Bijv. ' + (index === 0 ? 'Ik begon laat met leren, ik heb vooral samenvattingen gelezen, opgaven heb ik weinig geoefend.' : '...');
+                    questionsHtml += '<div class="pam-plan-question">' +
+                        '<label>' +
+                        '<span class="pam-question-number">' + (index + 1) + '</span>' +
+                        '<span class="pam-question-text">' + q + '</span>' +
+                        '</label>' +
+                        '<textarea name="plans[' + item.subject + '][]" rows="3" ' +
+                        'placeholder="' + placeholder + '" class="pam-plan-answer" required></textarea>' +
+                        '</div>';
+                });
+                
+                html = html.replace('{{#questions}}{{/questions}}', questionsHtml);
+                
+                $container.append(html);
+            });
+        },
+        
+        autoSave: function() {
+            this.saveData(true);
+        },
+        
+        saveData: function(silent, callback) {
+            const formData = new FormData();
+            formData.append('action', 'pam_save_data');
+            formData.append('nonce', pamData.nonce);
+            formData.append('period_number', $('input[name="period_number"]').val());
+            
+            // Add subjects
+            $('input[name="subjects[]"]:checked').each(function() {
+                formData.append('subjects[]', $(this).val());
+            });
+            
+            // Add grades
+            $('.pam-grade-input').each(function() {
+                const subject = $(this).data('subject');
+                const value = $(this).val();
+                if (value) {
+                    formData.append('grades[' + subject + ']', value);
+                }
+            });
+            
+            // Add improvement plans
+            $('.pam-plan-card').each(function() {
+                const subject = $(this).data('subject');
+                const answers = [];
+                $(this).find('.pam-plan-answer').each(function() {
+                    answers.push($(this).val());
+                });
+                if (answers.length > 0) {
+                    formData.append('plans[' + subject + ']', JSON.stringify(answers));
+                }
+            });
+            
+            $.ajax({
+                url: pamData.ajax_url,
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                success: function(response) {
+                    if (response.success && !silent) {
+                        PAM.showMessage(response.data.message, 'success');
+                    }
+                    if (callback) callback();
+                },
+                error: function() {
+                    if (!silent) {
+                        PAM.showMessage('Er is iets misgegaan. Probeer het opnieuw.', 'error');
+                    }
+                }
+            });
+        },
+        
+        finalizePeriod: function(e) {
+            e.preventDefault();
+            
+            if (!confirm(pamData.texts.confirm_submit)) {
+                return;
+            }
+            
+            // Validate all fields
+            let allFilled = true;
+            let missingFields = [];
+            
+            // Check grades
+            $('.pam-grade-input').each(function() {
+                const subject = $(this).data('subject');
+                const value = $(this).val().trim();
+                if (value === '' || value === '-') {
+                    allFilled = false;
+                    missingFields.push('Cijfer voor ' + subject);
+                }
+            });
+            
+            // Check improvement plans
+            $('.pam-plan-answer').each(function() {
+                const value = $(this).val().trim();
+                if (value === '' || value.indexOf('Bijv.') === 0 || value === '...') {
+                    allFilled = false;
+                    const $card = $(this).closest('.pam-plan-card');
+                    const subject = $card.data('subject');
+                    const qNumber = $(this).closest('.pam-plan-question').find('.pam-question-number').text();
+                    missingFields.push('Vraag ' + qNumber + ' voor ' + subject);
+                }
+            });
+            
+            if (!allFilled) {
+                this.showMessage(pamData.texts.incomplete + '<br>Nog in te vullen: ' + missingFields.join(', '), 'warning');
+                return;
+            }
+            
+            this.showMessage('Bezig met afronden...', 'info');
+            
+            const formData = new FormData();
+            formData.append('action', 'pam_finalize_period');
+            formData.append('nonce', pamData.nonce);
+            formData.append('period_number', $('input[name="period_number"]').val());
+            
+            $.ajax({
+                url: pamData.ajax_url,
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                success: function(response) {
+                    if (response.success) {
+                        PAM.showMessage(response.data.message, 'success');
+                        $('#pam-form :input').prop('disabled', true);
+                        $('#pam-finalize').hide();
+                        $('.pam-header').append('<div class="pam-status-closed"><span class="dashicons dashicons-yes"></span> Periode afgerond</div>');
+                    } else {
+                        PAM.showMessage(response.data.message, 'error');
+                    }
+                },
+                error: function() {
+                    PAM.showMessage('Er is iets misgegaan. Probeer het opnieuw.', 'error');
+                }
+            });
+        },
+        
+        showMessage: function(message, type) {
+            const $msg = $('#pam-message');
+            $msg.removeClass('error success warning info')
+                .addClass(type)
+                .html(message)
+                .slideDown();
+            
+            if (type === 'success' || type === 'info') {
+                setTimeout(function() {
+                    $msg.slideUp();
+                }, 5000);
+            }
+        }
+    };
+    
+    // Initialize
+    PAM.init();
+});

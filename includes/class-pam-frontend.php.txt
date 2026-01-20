@@ -1,0 +1,215 @@
+<?php
+/**
+ * Frontend functionality
+ */
+
+if (!defined('ABSPATH')) {
+    exit;
+}
+
+class PAM_Frontend {
+    
+    private static $instance = null;
+    
+    public static function get_instance() {
+        if (null === self::$instance) {
+            self::$instance = new self();
+        }
+        return self::$instance;
+    }
+    
+    private function __construct() {
+        add_shortcode('periode_actieplan', array($this, 'render_form'));
+        add_action('wp_enqueue_scripts', array($this, 'enqueue_assets'));
+        add_action('wp_ajax_pam_save_data', array($this, 'ajax_save_data'));
+        add_action('wp_ajax_pam_finalize_period', array($this, 'ajax_finalize_period'));
+    }
+    
+    public function enqueue_assets() {
+        if ($this->is_mentor_lesson_page()) {
+            wp_enqueue_style('pam-frontend', PAM_PLUGIN_URL . 'assets/css/frontend.css', array(), PAM_VERSION);
+            wp_enqueue_script('pam-frontend', PAM_PLUGIN_URL . 'assets/js/frontend.js', array('jquery'), PAM_VERSION, true);
+            
+            wp_localize_script('pam-frontend', 'pamData', array(
+                'ajax_url' => admin_url('admin-ajax.php'),
+                'nonce' => wp_create_nonce('pam_nonce'),
+                'texts' => array(
+                    'saving' => __('Bezig met opslaan...', 'periode-actieplan'),
+                    'saved' => __('Gegevens opgeslagen!', 'periode-actieplan'),
+                    'incomplete' => __('Goed bezig! Vul alle velden in om je periode af te ronden.', 'periode-actieplan'),
+                    'confirm_submit' => __('Weet je zeker dat je deze periode wilt afronden? Je kunt daarna niets meer aanpassen.', 'periode-actieplan')
+                )
+            ));
+        }
+    }
+    
+    private function is_mentor_lesson_page() {
+        // Check if we're on a Sensei lesson page
+        return is_singular('lesson');
+    }
+    
+    public function render_form($atts) {
+        if (!is_user_logged_in()) {
+            return '<p>' . __('Je moet ingelogd zijn om deze functie te gebruiken.', 'periode-actieplan') . '</p>';
+        }
+        
+        $user_id = get_current_user_id();
+        $current_period = $this->get_current_active_period();
+        
+        if ($current_period === false) {
+            return '<p>' . __('Er is momenteel geen actieve periode.', 'periode-actieplan') . '</p>';
+        }
+        
+        $period_status = PAM_Database::get_period_status($user_id, $current_period);
+        $subjects = PAM_Database::get_student_subjects($user_id);
+        $all_subjects = get_option('pam_subjects', array());
+        $grades = PAM_Database::get_grades($user_id, $current_period);
+        $pdro_questions = get_option('pam_pdro_questions', array());
+        
+        // Convert grades array to associative array for easier lookup
+        $grades_by_subject = array();
+        foreach ($grades as $grade) {
+            $grades_by_subject[$grade['subject_name']] = $grade;
+        }
+        
+        ob_start();
+        include PAM_PLUGIN_DIR . 'templates/frontend-form.php';
+        return ob_get_clean();
+    }
+    
+    private function get_current_active_period() {
+        $periods = get_option('pam_periods', array());
+        foreach ($periods as $index => $period) {
+            if (isset($period['active']) && $period['active']) {
+                return $index + 1;
+            }
+        }
+        return false;
+    }
+    
+    public function ajax_save_data() {
+        check_ajax_referer('pam_nonce', 'nonce');
+        
+        if (!is_user_logged_in()) {
+            wp_send_json_error(array('message' => __('Niet ingelogd', 'periode-actieplan')));
+        }
+        
+        $user_id = get_current_user_id();
+        $period_number = intval($_POST['period_number']);
+        $subjects = isset($_POST['subjects']) ? $_POST['subjects'] : array();
+        $grades_data = isset($_POST['grades']) ? $_POST['grades'] : array();
+        $plans_data = isset($_POST['plans']) ? $_POST['plans'] : array();
+        
+        // Check if period is still open
+        $status = PAM_Database::get_period_status($user_id, $period_number);
+        if ($status === 'closed') {
+            wp_send_json_error(array('message' => __('Deze periode is al afgesloten', 'periode-actieplan')));
+        }
+        
+        // Save subjects (only if first period or if changed)
+        if ($period_number == 1 || !empty($subjects)) {
+            PAM_Database::save_student_subjects($user_id, $subjects);
+        }
+        
+        // Save grades
+        foreach ($grades_data as $subject => $grade_value) {
+            $grade = $grade_value === '-' ? null : floatval(str_replace(',', '.', $grade_value));
+            PAM_Database::save_grade($user_id, $period_number, $subject, $grade, 'open');
+        }
+        
+        // Save improvement plans
+        $pdro_questions = get_option('pam_pdro_questions', array());
+        foreach ($plans_data as $subject => $answers) {
+            if (!empty($answers) && is_array($answers)) {
+                PAM_Database::save_improvement_plan($user_id, $period_number, $subject, $pdro_questions, $answers);
+            }
+        }
+        
+        wp_send_json_success(array('message' => __('Gegevens opgeslagen', 'periode-actieplan')));
+    }
+    
+    public function ajax_finalize_period() {
+        check_ajax_referer('pam_nonce', 'nonce');
+        
+        if (!is_user_logged_in()) {
+            wp_send_json_error(array('message' => __('Niet ingelogd', 'periode-actieplan')));
+        }
+        
+        $user_id = get_current_user_id();
+        $period_number = intval($_POST['period_number']);
+        
+        // Validate all data is complete
+        $validation = $this->validate_period_completion($user_id, $period_number);
+        
+        if (!$validation['complete']) {
+            wp_send_json_error(array(
+                'message' => __('Niet alle velden zijn ingevuld', 'periode-actieplan'),
+                'missing' => $validation['missing']
+            ));
+        }
+        
+        // Close the period
+        PAM_Database::close_period($user_id, $period_number);
+        
+        // Send emails
+        PAM_Email::send_period_completion_email($user_id, $period_number);
+        
+        wp_send_json_success(array('message' => __('Periode afgerond! Je ontvangt een bevestiging per e-mail.', 'periode-actieplan')));
+    }
+    
+    private function validate_period_completion($user_id, $period_number) {
+        $subjects = PAM_Database::get_student_subjects($user_id);
+        $grades = PAM_Database::get_grades($user_id, $period_number);
+        $missing = array();
+        
+        $grades_by_subject = array();
+        foreach ($grades as $grade) {
+            $grades_by_subject[$grade['subject_name']] = $grade;
+        }
+        
+        // Check all subjects have grades
+        foreach ($subjects as $subject) {
+            if (!isset($grades_by_subject[$subject]) || $grades_by_subject[$subject]['grade'] === null) {
+                $missing[] = sprintf(__('Cijfer voor %s ontbreekt', 'periode-actieplan'), $subject);
+            } else {
+                // Check if grade < 6.0 and improvement plan is required
+                if ($grades_by_subject[$subject]['grade'] < 6.0) {
+                    $plan = PAM_Database::get_improvement_plan($user_id, $period_number, $subject);
+                    if (!$plan) {
+                        $missing[] = sprintf(__('Actieplan voor %s ontbreekt', 'periode-actieplan'), $subject);
+                    } else {
+                        // Check all 4 answers are filled
+                        for ($i = 1; $i <= 4; $i++) {
+                            $answer = $plan['answer_' . $i];
+                            // Check if answer is not empty and not the example text
+                            if (empty($answer) || $this->is_example_text($answer)) {
+                                $missing[] = sprintf(__('Vraag %d van actieplan voor %s moet ingevuld worden', 'periode-actieplan'), $i, $subject);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        return array(
+            'complete' => empty($missing),
+            'missing' => $missing
+        );
+    }
+    
+    private function is_example_text($text) {
+        $examples = array(
+            'Bijv.',
+            'Bijvoorbeeld',
+            '...'
+        );
+        
+        foreach ($examples as $example) {
+            if (stripos($text, $example) !== false) {
+                return true;
+            }
+        }
+        
+        return false;
+    }
+}

@@ -1,0 +1,484 @@
+<?php
+/**
+ * Export functionality (Excel, PDF, Print)
+ */
+
+if (!defined('ABSPATH')) {
+    exit;
+}
+
+class PAM_Export {
+    
+    public static function init() {
+        add_action('admin_post_pam_export_excel', array(__CLASS__, 'export_excel'));
+        add_action('admin_post_pam_export_pdf', array(__CLASS__, 'export_pdf'));
+        add_action('admin_post_pam_print_view', array(__CLASS__, 'print_view'));
+    }
+    
+    /**
+     * Export student data to Excel (CSV format)
+     */
+    public static function export_excel() {
+        if (!current_user_can('edit_posts')) {
+            wp_die(__('Geen toegang', 'periode-actieplan'));
+        }
+        
+        check_admin_referer('pam_export_excel');
+        
+        $student_id = isset($_GET['student_id']) ? intval($_GET['student_id']) : 0;
+        $period = isset($_GET['period']) ? intval($_GET['period']) : null;
+        
+        if ($student_id > 0) {
+            self::export_single_student_excel($student_id, $period);
+        } else {
+            self::export_all_students_excel($period);
+        }
+    }
+    
+    private static function export_single_student_excel($student_id, $period = null) {
+        $user = get_userdata($student_id);
+        if (!$user) {
+            wp_die(__('Leerling niet gevonden', 'periode-actieplan'));
+        }
+        
+        $filename = 'periode-actieplan-' . sanitize_title($user->display_name) . '.csv';
+        
+        header('Content-Type: text/csv; charset=utf-8');
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+        header('Pragma: no-cache');
+        header('Expires: 0');
+        
+        $output = fopen('php://output', 'w');
+        
+        // BOM for Excel UTF-8 support
+        fprintf($output, chr(0xEF).chr(0xBB).chr(0xBF));
+        
+        // Header
+        fputcsv($output, array('Periode Actieplan - ' . $user->display_name));
+        fputcsv($output, array('')); // Empty row
+        
+        // Student info
+        $meta = PAM_Database::get_student_meta($student_id);
+        fputcsv($output, array('Leerling', $user->display_name));
+        fputcsv($output, array('E-mail', $user->user_email));
+        fputcsv($output, array('Klas', $meta ? $meta['class_name'] : ''));
+        fputcsv($output, array('')); // Empty row
+        
+        // Process each period
+        $periods_to_export = $period ? array($period) : array(1, 2, 3, 4);
+        
+        foreach ($periods_to_export as $p) {
+            $grades = PAM_Database::get_grades($student_id, $p);
+            
+            if (empty($grades)) {
+                continue;
+            }
+            
+            $periods = get_option('pam_periods', array());
+            $period_name = isset($periods[$p - 1]['name']) ? $periods[$p - 1]['name'] : 'Periode ' . $p;
+            
+            fputcsv($output, array($period_name));
+            fputcsv($output, array('Vak', 'Cijfer'));
+            
+            foreach ($grades as $grade) {
+                $grade_value = $grade['grade'] !== null ? number_format($grade['grade'], 1, ',', '') : '-';
+                fputcsv($output, array($grade['subject_name'], $grade_value));
+            }
+            
+            // Add improvement plans if any
+            $has_plans = false;
+            foreach ($grades as $grade) {
+                if ($grade['grade'] !== null && $grade['grade'] < 6.0) {
+                    $plan = PAM_Database::get_improvement_plan($student_id, $p, $grade['subject_name']);
+                    if ($plan && !$has_plans) {
+                        fputcsv($output, array('')); // Empty row
+                        fputcsv($output, array('Verbeterplannen'));
+                        $has_plans = true;
+                    }
+                    
+                    if ($plan) {
+                        fputcsv($output, array('')); // Empty row
+                        fputcsv($output, array($grade['subject_name'] . ' (cijfer: ' . number_format($grade['grade'], 1, ',', '') . ')'));
+                        
+                        for ($i = 1; $i <= 4; $i++) {
+                            $question = $plan['question_' . $i];
+                            $answer = $plan['answer_' . $i];
+                            
+                            if (!empty($question) && !empty($answer)) {
+                                fputcsv($output, array('Vraag ' . $i, $question));
+                                fputcsv($output, array('Antwoord', $answer));
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // Add mentor notes
+            $notes = PAM_Database::get_mentor_notes($student_id, $p);
+            if ($notes && !empty($notes['notes'])) {
+                fputcsv($output, array('')); // Empty row
+                fputcsv($output, array('Gespreksverslag mentor'));
+                fputcsv($output, array($notes['notes']));
+            }
+            
+            fputcsv($output, array('')); // Empty row between periods
+        }
+        
+        fclose($output);
+        exit;
+    }
+    
+    private static function export_all_students_excel($period = null) {
+        $filename = 'periode-actieplan-alle-leerlingen.csv';
+        
+        header('Content-Type: text/csv; charset=utf-8');
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+        header('Pragma: no-cache');
+        header('Expires: 0');
+        
+        $output = fopen('php://output', 'w');
+        
+        // BOM for Excel UTF-8 support
+        fprintf($output, chr(0xEF).chr(0xBB).chr(0xBF));
+        
+        // Get all students
+        $args = array(
+            'role__in' => array('subscriber', 'student'),
+            'orderby' => 'display_name',
+            'order' => 'ASC'
+        );
+        $users = get_users($args);
+        
+        // Headers
+        $headers = array('Leerling', 'E-mail', 'Klas', 'Periode');
+        $subjects = get_option('pam_subjects', array());
+        foreach ($subjects as $subject) {
+            $headers[] = $subject;
+        }
+        $headers[] = 'Aantal onvoldoendes';
+        
+        fputcsv($output, $headers);
+        
+        // Data
+        foreach ($users as $user) {
+            $meta = PAM_Database::get_student_meta($user->ID);
+            $periods_to_export = $period ? array($period) : array(1, 2, 3, 4);
+            
+            foreach ($periods_to_export as $p) {
+                $grades = PAM_Database::get_grades($user->ID, $p);
+                
+                if (empty($grades)) {
+                    continue;
+                }
+                
+                $row = array(
+                    $user->display_name,
+                    $user->user_email,
+                    $meta ? $meta['class_name'] : '',
+                    'Periode ' . $p
+                );
+                
+                $failures = 0;
+                $grades_by_subject = array();
+                foreach ($grades as $grade) {
+                    $grades_by_subject[$grade['subject_name']] = $grade['grade'];
+                    if ($grade['grade'] !== null && $grade['grade'] < 6.0) {
+                        $failures++;
+                    }
+                }
+                
+                foreach ($subjects as $subject) {
+                    $grade_value = isset($grades_by_subject[$subject]) && $grades_by_subject[$subject] !== null 
+                        ? number_format($grades_by_subject[$subject], 1, ',', '') 
+                        : '-';
+                    $row[] = $grade_value;
+                }
+                
+                $row[] = $failures;
+                
+                fputcsv($output, $row);
+            }
+        }
+        
+        fclose($output);
+        exit;
+    }
+    
+    /**
+     * Generate PDF report
+     * Note: This requires a PDF library like TCPDF or mPDF
+     * Below is a simplified HTML version that can be printed to PDF
+     */
+    public static function export_pdf() {
+        if (!current_user_can('edit_posts')) {
+            wp_die(__('Geen toegang', 'periode-actieplan'));
+        }
+        
+        check_admin_referer('pam_export_pdf');
+        
+        $student_id = isset($_GET['student_id']) ? intval($_GET['student_id']) : 0;
+        
+        if (!$student_id) {
+            wp_die(__('Geen leerling geselecteerd', 'periode-actieplan'));
+        }
+        
+        $user = get_userdata($student_id);
+        if (!$user) {
+            wp_die(__('Leerling niet gevonden', 'periode-actieplan'));
+        }
+        
+        // For true PDF generation, you would use a library like TCPDF
+        // For now, we'll generate a print-friendly HTML that can be saved as PDF
+        self::print_view();
+    }
+    
+    /**
+     * Print view - HTML that can be printed or saved as PDF
+     */
+    public static function print_view() {
+        if (!current_user_can('edit_posts')) {
+            wp_die(__('Geen toegang', 'periode-actieplan'));
+        }
+        
+        check_admin_referer('pam_print_view');
+        
+        $student_id = isset($_GET['student_id']) ? intval($_GET['student_id']) : 0;
+        $period = isset($_GET['period']) ? intval($_GET['period']) : null;
+        
+        if (!$student_id) {
+            wp_die(__('Geen leerling geselecteerd', 'periode-actieplan'));
+        }
+        
+        $user = get_userdata($student_id);
+        if (!$user) {
+            wp_die(__('Leerling niet gevonden', 'periode-actieplan'));
+        }
+        
+        $meta = PAM_Database::get_student_meta($student_id);
+        $subjects = PAM_Database::get_student_subjects($student_id);
+        
+        ?>
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <title>Periode Actieplan - <?php echo esc_html($user->display_name); ?></title>
+            <style>
+                @media print {
+                    .no-print { display: none; }
+                    @page { margin: 2cm; }
+                }
+                
+                body {
+                    font-family: Arial, sans-serif;
+                    line-height: 1.6;
+                    max-width: 1000px;
+                    margin: 0 auto;
+                    padding: 20px;
+                }
+                
+                .header {
+                    border-bottom: 3px solid #667eea;
+                    padding-bottom: 20px;
+                    margin-bottom: 30px;
+                }
+                
+                h1 {
+                    color: #667eea;
+                    margin: 0;
+                }
+                
+                .student-info {
+                    background: #f8f9fa;
+                    padding: 15px;
+                    border-radius: 8px;
+                    margin-bottom: 30px;
+                }
+                
+                .period-section {
+                    page-break-inside: avoid;
+                    margin-bottom: 40px;
+                }
+                
+                .period-title {
+                    background: #667eea;
+                    color: white;
+                    padding: 10px 15px;
+                    border-radius: 8px;
+                    margin-bottom: 15px;
+                }
+                
+                table {
+                    width: 100%;
+                    border-collapse: collapse;
+                    margin-bottom: 20px;
+                }
+                
+                th, td {
+                    border: 1px solid #ddd;
+                    padding: 12px;
+                    text-align: left;
+                }
+                
+                th {
+                    background: #f8f9fa;
+                    font-weight: 600;
+                }
+                
+                .failure {
+                    background: #fff3cd;
+                    color: #856404;
+                    font-weight: bold;
+                }
+                
+                .improvement-plan {
+                    background: #ffeaa7;
+                    padding: 15px;
+                    border-radius: 8px;
+                    margin-bottom: 15px;
+                }
+                
+                .plan-question {
+                    background: white;
+                    padding: 10px;
+                    border-radius: 5px;
+                    margin-bottom: 10px;
+                }
+                
+                .mentor-notes {
+                    background: #e3f2fd;
+                    padding: 15px;
+                    border-radius: 8px;
+                    margin-top: 20px;
+                }
+                
+                .print-button {
+                    position: fixed;
+                    top: 20px;
+                    right: 20px;
+                    background: #667eea;
+                    color: white;
+                    border: none;
+                    padding: 12px 24px;
+                    border-radius: 8px;
+                    cursor: pointer;
+                    font-size: 16px;
+                }
+            </style>
+        </head>
+        <body>
+            <button class="print-button no-print" onclick="window.print()">
+                🖨️ Printen / Opslaan als PDF
+            </button>
+            
+            <div class="header">
+                <h1>Periode Actieplan Rapport</h1>
+                <p>Gegenereerd op: <?php echo date('d-m-Y H:i'); ?></p>
+            </div>
+            
+            <div class="student-info">
+                <h2><?php echo esc_html($user->display_name); ?></h2>
+                <p><strong>E-mail:</strong> <?php echo esc_html($user->user_email); ?></p>
+                <?php if ($meta && !empty($meta['class_name'])): ?>
+                    <p><strong>Klas:</strong> <?php echo esc_html($meta['class_name']); ?></p>
+                <?php endif; ?>
+            </div>
+            
+            <?php
+            $periods_to_show = $period ? array($period) : array(1, 2, 3, 4);
+            $all_periods = get_option('pam_periods', array());
+            
+            foreach ($periods_to_show as $p):
+                $grades = PAM_Database::get_grades($student_id, $p);
+                
+                if (empty($grades)) {
+                    continue;
+                }
+                
+                $period_name = isset($all_periods[$p - 1]['name']) ? $all_periods[$p - 1]['name'] : 'Periode ' . $p;
+                ?>
+                
+                <div class="period-section">
+                    <h2 class="period-title"><?php echo esc_html($period_name); ?></h2>
+                    
+                    <h3>Cijfers</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Vak</th>
+                                <th>Cijfer</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($grades as $grade): 
+                                $grade_value = $grade['grade'] !== null ? number_format($grade['grade'], 1, ',', '') : '-';
+                                $is_failing = $grade['grade'] !== null && $grade['grade'] < 6.0;
+                                $row_class = $is_failing ? 'failure' : '';
+                            ?>
+                                <tr class="<?php echo $row_class; ?>">
+                                    <td><?php echo esc_html($grade['subject_name']); ?></td>
+                                    <td><?php echo esc_html($grade_value); ?></td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                    
+                    <?php
+                    // Show improvement plans
+                    $has_plans = false;
+                    foreach ($grades as $grade):
+                        if ($grade['grade'] !== null && $grade['grade'] < 6.0):
+                            $plan = PAM_Database::get_improvement_plan($student_id, $p, $grade['subject_name']);
+                            if ($plan):
+                                if (!$has_plans):
+                                    echo '<h3>Verbeterplannen</h3>';
+                                    $has_plans = true;
+                                endif;
+                                ?>
+                                
+                                <div class="improvement-plan">
+                                    <h4>📚 <?php echo esc_html($grade['subject_name']); ?> (cijfer: <?php echo number_format($grade['grade'], 1, ',', ''); ?>)</h4>
+                                    
+                                    <?php for ($i = 1; $i <= 4; $i++): 
+                                        $question = $plan['question_' . $i];
+                                        $answer = $plan['answer_' . $i];
+                                        
+                                        if (!empty($question) && !empty($answer)):
+                                    ?>
+                                        <div class="plan-question">
+                                            <p><strong><?php echo $i; ?>. <?php echo esc_html($question); ?></strong></p>
+                                            <p><?php echo nl2br(esc_html($answer)); ?></p>
+                                        </div>
+                                    <?php 
+                                        endif;
+                                    endfor; 
+                                    ?>
+                                </div>
+                                
+                            <?php 
+                            endif;
+                        endif;
+                    endforeach;
+                    
+                    // Show mentor notes
+                    $notes = PAM_Database::get_mentor_notes($student_id, $p);
+                    if ($notes && !empty($notes['notes'])):
+                    ?>
+                        <div class="mentor-notes">
+                            <h4>Gespreksverslag Mentor</h4>
+                            <p><?php echo nl2br(esc_html($notes['notes'])); ?></p>
+                        </div>
+                    <?php endif; ?>
+                </div>
+                
+            <?php endforeach; ?>
+            
+        </body>
+        </html>
+        <?php
+        exit;
+    }
+}
+
+// Initialize export functionality
+add_action('admin_init', array('PAM_Export', 'init'));

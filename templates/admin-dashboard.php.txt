@@ -1,0 +1,152 @@
+<?php
+/**
+ * Admin Dashboard Template
+ */
+
+if (!defined('ABSPATH')) {
+    exit;
+}
+
+$periods = get_option('pam_periods', array());
+$active_period_number = null;
+$active_period_name = '';
+
+foreach ($periods as $index => $period) {
+    if (isset($period['active']) && $period['active']) {
+        $active_period_number = $index + 1;
+        $active_period_name = $period['name'];
+        break;
+    }
+}
+?>
+
+<div class="wrap pam-admin-wrap">
+    <h1 class="pam-admin-title">
+        <span class="dashicons dashicons-welcome-learn-more"></span>
+        <?php _e('Mentorlessen Dashboard', 'periode-actieplan'); ?>
+    </h1>
+    
+    <?php if ($active_period_number): ?>
+        <div class="pam-dashboard-header">
+            <div class="pam-active-period">
+                <span class="dashicons dashicons-calendar-alt"></span>
+                <strong><?php _e('Actieve periode:', 'periode-actieplan'); ?></strong>
+                <?php echo esc_html($active_period_name); ?>
+            </div>
+        </div>
+        
+        <div class="pam-stats-grid">
+            <div class="pam-stat-card pam-stat-primary">
+                <div class="pam-stat-icon">
+                    <span class="dashicons dashicons-groups"></span>
+                </div>
+                <div class="pam-stat-content">
+                    <div class="pam-stat-number"><?php echo esc_html($stats['total_students']); ?></div>
+                    <div class="pam-stat-label"><?php _e('Leerlingen Actief', 'periode-actieplan'); ?></div>
+                </div>
+            </div>
+            
+            <div class="pam-stat-card pam-stat-success">
+                <div class="pam-stat-icon">
+                    <span class="dashicons dashicons-yes-alt"></span>
+                </div>
+                <div class="pam-stat-content">
+                    <div class="pam-stat-number"><?php echo esc_html($stats['completed_students']); ?></div>
+                    <div class="pam-stat-label"><?php _e('Periodes Afgerond', 'periode-actieplan'); ?></div>
+                </div>
+            </div>
+            
+            <div class="pam-stat-card pam-stat-warning">
+                <div class="pam-stat-icon">
+                    <span class="dashicons dashicons-warning"></span>
+                </div>
+                <div class="pam-stat-content">
+                    <div class="pam-stat-number"><?php echo esc_html($stats['students_with_failures']); ?></div>
+                    <div class="pam-stat-label"><?php _e('Leerlingen met 2+ Onvoldoendes', 'periode-actieplan'); ?></div>
+                </div>
+            </div>
+            
+            <div class="pam-stat-card pam-stat-info">
+                <div class="pam-stat-icon">
+                    <span class="dashicons dashicons-chart-line"></span>
+                </div>
+                <div class="pam-stat-content">
+                    <div class="pam-stat-number">
+                        <?php echo $stats['average_grade'] ? number_format($stats['average_grade'], 1, ',', '') : '-'; ?>
+                    </div>
+                    <div class="pam-stat-label"><?php _e('Gemiddeld Cijfer', 'periode-actieplan'); ?></div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="pam-dashboard-actions">
+            <a href="<?php echo admin_url('admin.php?page=pam-students'); ?>" class="pam-action-card">
+                <span class="dashicons dashicons-groups"></span>
+                <div class="pam-action-content">
+                    <h3><?php _e('Leerlingen Beheren', 'periode-actieplan'); ?></h3>
+                    <p><?php _e('Bekijk en beheer alle leerling gegevens', 'periode-actieplan'); ?></p>
+                </div>
+                <span class="dashicons dashicons-arrow-right-alt2"></span>
+            </a>
+            
+            <a href="<?php echo admin_url('admin.php?page=pam-failures'); ?>" class="pam-action-card pam-action-warning">
+                <span class="dashicons dashicons-warning"></span>
+                <div class="pam-action-content">
+                    <h3><?php _e('Onvoldoendes Overzicht', 'periode-actieplan'); ?></h3>
+                    <p><?php _e('Leerlingen met 2 of meer onvoldoendes', 'periode-actieplan'); ?></p>
+                </div>
+                <span class="dashicons dashicons-arrow-right-alt2"></span>
+            </a>
+            
+            <a href="<?php echo admin_url('admin.php?page=pam-settings'); ?>" class="pam-action-card">
+                <span class="dashicons dashicons-admin-settings"></span>
+                <div class="pam-action-content">
+                    <h3><?php _e('Instellingen', 'periode-actieplan'); ?></h3>
+                    <p><?php _e('Configureer vakken, periodes en e-mails', 'periode-actieplan'); ?></p>
+                </div>
+                <span class="dashicons dashicons-arrow-right-alt2"></span>
+            </a>
+        </div>
+        
+    <?php else: ?>
+        <div class="pam-notice pam-notice-warning">
+            <span class="dashicons dashicons-info"></span>
+            <div>
+                <h3><?php _e('Geen actieve periode', 'periode-actieplan'); ?></h3>
+                <p><?php _e('Er is momenteel geen actieve periode ingesteld. Ga naar instellingen om een periode te activeren.', 'periode-actieplan'); ?></p>
+                <a href="<?php echo admin_url('admin.php?page=pam-settings&tab=periods'); ?>" class="button button-primary">
+                    <?php _e('Naar Instellingen', 'periode-actieplan'); ?>
+                </a>
+            </div>
+        </div>
+    <?php endif; ?>
+    
+    <div class="pam-help-section">
+        <h2><?php _e('Snelstart Handleiding', 'periode-actieplan'); ?></h2>
+        <div class="pam-help-grid">
+            <div class="pam-help-card">
+                <span class="pam-help-number">1</span>
+                <h4><?php _e('Instellingen Configureren', 'periode-actieplan'); ?></h4>
+                <p><?php _e('Stel je vakkenlijst in, configureer periodes en pas e-mail templates aan.', 'periode-actieplan'); ?></p>
+            </div>
+            
+            <div class="pam-help-card">
+                <span class="pam-help-number">2</span>
+                <h4><?php _e('Mentoren Toewijzen', 'periode-actieplan'); ?></h4>
+                <p><?php _e('Wijs per leerling 1 of 2 mentoren toe via het leerlingen overzicht.', 'periode-actieplan'); ?></p>
+            </div>
+            
+            <div class="pam-help-card">
+                <span class="pam-help-number">3</span>
+                <h4><?php _e('Shortcode Plaatsen', 'periode-actieplan'); ?></h4>
+                <p><?php _e('Voeg [periode_actieplan] toe aan je Sensei mentor les.', 'periode-actieplan'); ?></p>
+            </div>
+            
+            <div class="pam-help-card">
+                <span class="pam-help-number">4</span>
+                <h4><?php _e('Monitoren & Rapporteren', 'periode-actieplan'); ?></h4>
+                <p><?php _e('Bekijk voortgang, exporteer data en beheer gespreksverslagen.', 'periode-actieplan'); ?></p>
+            </div>
+        </div>
+    </div>
+</div>

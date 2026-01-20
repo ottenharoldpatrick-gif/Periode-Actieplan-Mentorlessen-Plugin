@@ -1,0 +1,356 @@
+<?php
+/**
+ * Database management class
+ */
+
+if (!defined('ABSPATH')) {
+    exit;
+}
+
+class PAM_Database {
+    
+    public static function create_tables() {
+        global $wpdb;
+        $charset_collate = $wpdb->get_charset_collate();
+        
+        require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
+        
+        // Table for student subjects (vakkenpakket)
+        $table_subjects = $wpdb->prefix . 'pam_student_subjects';
+        $sql_subjects = "CREATE TABLE $table_subjects (
+            id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+            user_id bigint(20) UNSIGNED NOT NULL,
+            subject_name varchar(255) NOT NULL,
+            created_at datetime DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (id),
+            KEY user_id (user_id),
+            KEY subject_name (subject_name)
+        ) $charset_collate;";
+        dbDelta($sql_subjects);
+        
+        // Table for grades per period
+        $table_grades = $wpdb->prefix . 'pam_grades';
+        $sql_grades = "CREATE TABLE $table_grades (
+            id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+            user_id bigint(20) UNSIGNED NOT NULL,
+            period_number tinyint(1) NOT NULL,
+            subject_name varchar(255) NOT NULL,
+            grade decimal(3,1) DEFAULT NULL,
+            status varchar(20) DEFAULT 'open',
+            created_at datetime DEFAULT CURRENT_TIMESTAMP,
+            updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            PRIMARY KEY (id),
+            UNIQUE KEY user_period_subject (user_id, period_number, subject_name),
+            KEY user_id (user_id),
+            KEY period_number (period_number),
+            KEY status (status)
+        ) $charset_collate;";
+        dbDelta($sql_grades);
+        
+        // Table for improvement plans (PDRO)
+        $table_plans = $wpdb->prefix . 'pam_improvement_plans';
+        $sql_plans = "CREATE TABLE $table_plans (
+            id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+            user_id bigint(20) UNSIGNED NOT NULL,
+            period_number tinyint(1) NOT NULL,
+            subject_name varchar(255) NOT NULL,
+            question_1 text,
+            answer_1 text,
+            question_2 text,
+            answer_2 text,
+            question_3 text,
+            answer_3 text,
+            question_4 text,
+            answer_4 text,
+            created_at datetime DEFAULT CURRENT_TIMESTAMP,
+            updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            PRIMARY KEY (id),
+            UNIQUE KEY user_period_subject (user_id, period_number, subject_name),
+            KEY user_id (user_id)
+        ) $charset_collate;";
+        dbDelta($sql_plans);
+        
+        // Table for mentor notes (gespreksverslag)
+        $table_notes = $wpdb->prefix . 'pam_mentor_notes';
+        $sql_notes = "CREATE TABLE $table_notes (
+            id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+            user_id bigint(20) UNSIGNED NOT NULL,
+            period_number tinyint(1) NOT NULL,
+            mentor_id bigint(20) UNSIGNED NOT NULL,
+            notes text,
+            created_at datetime DEFAULT CURRENT_TIMESTAMP,
+            updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            PRIMARY KEY (id),
+            UNIQUE KEY user_period (user_id, period_number),
+            KEY user_id (user_id),
+            KEY mentor_id (mentor_id)
+        ) $charset_collate;";
+        dbDelta($sql_notes);
+        
+        // Table for student meta (mentors, class, etc)
+        $table_meta = $wpdb->prefix . 'pam_student_meta';
+        $sql_meta = "CREATE TABLE $table_meta (
+            id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+            user_id bigint(20) UNSIGNED NOT NULL,
+            mentor_1 bigint(20) UNSIGNED DEFAULT NULL,
+            mentor_2 bigint(20) UNSIGNED DEFAULT NULL,
+            class_name varchar(100) DEFAULT NULL,
+            created_at datetime DEFAULT CURRENT_TIMESTAMP,
+            updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            PRIMARY KEY (id),
+            UNIQUE KEY user_id (user_id)
+        ) $charset_collate;";
+        dbDelta($sql_meta);
+        
+        update_option('pam_db_version', PAM_VERSION);
+    }
+    
+    public static function get_student_subjects($user_id) {
+        global $wpdb;
+        $table = $wpdb->prefix . 'pam_student_subjects';
+        
+        return $wpdb->get_col($wpdb->prepare(
+            "SELECT subject_name FROM $table WHERE user_id = %d ORDER BY id ASC",
+            $user_id
+        ));
+    }
+    
+    public static function save_student_subjects($user_id, $subjects) {
+        global $wpdb;
+        $table = $wpdb->prefix . 'pam_student_subjects';
+        
+        // Delete existing subjects
+        $wpdb->delete($table, array('user_id' => $user_id));
+        
+        // Insert new subjects
+        foreach ($subjects as $subject) {
+            $wpdb->insert($table, array(
+                'user_id' => $user_id,
+                'subject_name' => sanitize_text_field($subject)
+            ));
+        }
+    }
+    
+    public static function get_grades($user_id, $period_number = null) {
+        global $wpdb;
+        $table = $wpdb->prefix . 'pam_grades';
+        
+        if ($period_number !== null) {
+            return $wpdb->get_results($wpdb->prepare(
+                "SELECT * FROM $table WHERE user_id = %d AND period_number = %d ORDER BY subject_name ASC",
+                $user_id,
+                $period_number
+            ), ARRAY_A);
+        }
+        
+        return $wpdb->get_results($wpdb->prepare(
+            "SELECT * FROM $table WHERE user_id = %d ORDER BY period_number ASC, subject_name ASC",
+            $user_id
+        ), ARRAY_A);
+    }
+    
+    public static function save_grade($user_id, $period_number, $subject_name, $grade, $status = 'open') {
+        global $wpdb;
+        $table = $wpdb->prefix . 'pam_grades';
+        
+        $data = array(
+            'user_id' => $user_id,
+            'period_number' => $period_number,
+            'subject_name' => $subject_name,
+            'grade' => $grade,
+            'status' => $status
+        );
+        
+        $existing = $wpdb->get_row($wpdb->prepare(
+            "SELECT id FROM $table WHERE user_id = %d AND period_number = %d AND subject_name = %s",
+            $user_id,
+            $period_number,
+            $subject_name
+        ));
+        
+        if ($existing) {
+            return $wpdb->update($table, $data, array('id' => $existing->id));
+        } else {
+            return $wpdb->insert($table, $data);
+        }
+    }
+    
+    public static function get_improvement_plan($user_id, $period_number, $subject_name) {
+        global $wpdb;
+        $table = $wpdb->prefix . 'pam_improvement_plans';
+        
+        return $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM $table WHERE user_id = %d AND period_number = %d AND subject_name = %s",
+            $user_id,
+            $period_number,
+            $subject_name
+        ), ARRAY_A);
+    }
+    
+    public static function save_improvement_plan($user_id, $period_number, $subject_name, $questions, $answers) {
+        global $wpdb;
+        $table = $wpdb->prefix . 'pam_improvement_plans';
+        
+        $data = array(
+            'user_id' => $user_id,
+            'period_number' => $period_number,
+            'subject_name' => $subject_name,
+            'question_1' => $questions[0] ?? '',
+            'answer_1' => $answers[0] ?? '',
+            'question_2' => $questions[1] ?? '',
+            'answer_2' => $answers[1] ?? '',
+            'question_3' => $questions[2] ?? '',
+            'answer_3' => $answers[2] ?? '',
+            'question_4' => $questions[3] ?? '',
+            'answer_4' => $answers[3] ?? ''
+        );
+        
+        $existing = $wpdb->get_row($wpdb->prepare(
+            "SELECT id FROM $table WHERE user_id = %d AND period_number = %d AND subject_name = %s",
+            $user_id,
+            $period_number,
+            $subject_name
+        ));
+        
+        if ($existing) {
+            return $wpdb->update($table, $data, array('id' => $existing->id));
+        } else {
+            return $wpdb->insert($table, $data);
+        }
+    }
+    
+    public static function get_period_status($user_id, $period_number) {
+        global $wpdb;
+        $table = $wpdb->prefix . 'pam_grades';
+        
+        $result = $wpdb->get_var($wpdb->prepare(
+            "SELECT status FROM $table WHERE user_id = %d AND period_number = %d LIMIT 1",
+            $user_id,
+            $period_number
+        ));
+        
+        return $result ?? 'open';
+    }
+    
+    public static function close_period($user_id, $period_number) {
+        global $wpdb;
+        $table = $wpdb->prefix . 'pam_grades';
+        
+        return $wpdb->update(
+            $table,
+            array('status' => 'closed'),
+            array('user_id' => $user_id, 'period_number' => $period_number)
+        );
+    }
+    
+    public static function open_period($user_id, $period_number) {
+        global $wpdb;
+        $table = $wpdb->prefix . 'pam_grades';
+        
+        return $wpdb->update(
+            $table,
+            array('status' => 'open'),
+            array('user_id' => $user_id, 'period_number' => $period_number)
+        );
+    }
+    
+    public static function get_student_meta($user_id) {
+        global $wpdb;
+        $table = $wpdb->prefix . 'pam_student_meta';
+        
+        return $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM $table WHERE user_id = %d",
+            $user_id
+        ), ARRAY_A);
+    }
+    
+    public static function save_student_meta($user_id, $data) {
+        global $wpdb;
+        $table = $wpdb->prefix . 'pam_student_meta';
+        
+        $existing = $wpdb->get_row($wpdb->prepare(
+            "SELECT id FROM $table WHERE user_id = %d",
+            $user_id
+        ));
+        
+        $save_data = array(
+            'user_id' => $user_id,
+            'mentor_1' => isset($data['mentor_1']) ? intval($data['mentor_1']) : null,
+            'mentor_2' => isset($data['mentor_2']) ? intval($data['mentor_2']) : null,
+            'class_name' => isset($data['class_name']) ? sanitize_text_field($data['class_name']) : null
+        );
+        
+        if ($existing) {
+            return $wpdb->update($table, $save_data, array('id' => $existing->id));
+        } else {
+            return $wpdb->insert($table, $save_data);
+        }
+    }
+    
+    public static function get_mentor_notes($user_id, $period_number) {
+        global $wpdb;
+        $table = $wpdb->prefix . 'pam_mentor_notes';
+        
+        return $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM $table WHERE user_id = %d AND period_number = %d",
+            $user_id,
+            $period_number
+        ), ARRAY_A);
+    }
+    
+    public static function save_mentor_notes($user_id, $period_number, $mentor_id, $notes) {
+        global $wpdb;
+        $table = $wpdb->prefix . 'pam_mentor_notes';
+        
+        $data = array(
+            'user_id' => $user_id,
+            'period_number' => $period_number,
+            'mentor_id' => $mentor_id,
+            'notes' => wp_kses_post($notes)
+        );
+        
+        $existing = $wpdb->get_row($wpdb->prepare(
+            "SELECT id FROM $table WHERE user_id = %d AND period_number = %d",
+            $user_id,
+            $period_number
+        ));
+        
+        if ($existing) {
+            return $wpdb->update($table, $data, array('id' => $existing->id));
+        } else {
+            return $wpdb->insert($table, $data);
+        }
+    }
+    
+    public static function get_students_with_failures($period_number = null) {
+        global $wpdb;
+        $grades_table = $wpdb->prefix . 'pam_grades';
+        $meta_table = $wpdb->prefix . 'pam_student_meta';
+        
+        if ($period_number === null) {
+            // Get latest period for each student
+            $sql = "SELECT g.user_id, g.period_number, COUNT(*) as failure_count,
+                    m.mentor_1, m.mentor_2, m.class_name
+                    FROM $grades_table g
+                    LEFT JOIN $meta_table m ON g.user_id = m.user_id
+                    WHERE g.grade < 6.0
+                    GROUP BY g.user_id, g.period_number
+                    HAVING failure_count >= 2
+                    ORDER BY g.period_number DESC, failure_count DESC";
+        } else {
+            $sql = $wpdb->prepare(
+                "SELECT g.user_id, g.period_number, COUNT(*) as failure_count,
+                m.mentor_1, m.mentor_2, m.class_name
+                FROM $grades_table g
+                LEFT JOIN $meta_table m ON g.user_id = m.user_id
+                WHERE g.period_number = %d AND g.grade < 6.0
+                GROUP BY g.user_id
+                HAVING failure_count >= 2
+                ORDER BY failure_count DESC",
+                $period_number
+            );
+        }
+        
+        return $wpdb->get_results($sql, ARRAY_A);
+    }
+}
