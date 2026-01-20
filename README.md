@@ -1,9 +1,10 @@
 # Periode-Actieplan-Mentorlessen-Plugin
 
 📦 Complete WordPress Plugin: "Periode Actieplan Mentorlessen"
-✅ Wat is geïmplementeerd:
-Frontend Functionaliteit:
 
+✅ Wat is geïmplementeerd:
+
+Frontend Functionaliteit:
 ✅ Shortcode [periode_actieplan] voor gebruik in Sensei lessen
 ✅ Vakkenpakket selectie in periode 1 (aanvinken + eigen vakken toevoegen)
 ✅ Cijferinvoer per vak (1-10 met 1 decimaal)
@@ -15,7 +16,6 @@ Frontend Functionaliteit:
 ✅ Responsive design met mooie styling
 
 Admin Functionaliteit:
-
 ✅ Dashboard met statistieken
 ✅ Leerling overzicht met alle data
 ✅ Onvoldoendes overzicht (2+ onvoldoendes)
@@ -26,20 +26,17 @@ Admin Functionaliteit:
 ✅ Uitgebreide instellingen (vakken, periodes, mentoren, PDRO vragen, e-mail template)
 
 E-mail Systeem:
-
 ✅ Automatische e-mail bij afronden periode
 ✅ Naar leerling + mentor(en)
 ✅ Overzicht cijfers en volledige PDRO plannen
 ✅ Aanpasbare e-mail template met placeholders
 
 Export Functionaliteit:
-
 ✅ Excel/CSV export (individueel of alle leerlingen)
 ✅ Print-vriendelijke view voor PDF generatie
 ✅ Volledige data inclusief verbeterplannen en gespreksverslagen
 
 Database:
-
 ✅ 5 custom tables voor efficiënte opslag
 ✅ Automatische aanmaak bij activatie
 ✅ Proper indexing voor performance
