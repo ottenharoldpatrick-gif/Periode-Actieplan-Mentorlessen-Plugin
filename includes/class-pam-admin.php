@@ -275,9 +275,19 @@ class PAM_Admin {
             array('name' => 'Periode 1', 'active' => true),
             array('name' => 'Periode 2', 'active' => false),
             array('name' => 'Periode 3', 'active' => false),
-            array('name'
+            array('name' => 'Periode 4', 'active' => false)
     
     public function ajax_save_settings() {
+                        );
+            update_option('pam_periods', $periods);
+        }
+        
+        $mentor_role = get_option('pam_mentor_role', 'teacher');
+        $email_template = get_option('pam_email_template', '');
+        $pdro_questions = get_option('pam_pdro_questions', array());
+        
+        include PAM_PLUGIN_DIR . 'templates/admin-settings.php';
+    }
         check_ajax_referer('pam_admin_nonce', 'nonce');
         
         if (!current_user_can('manage_options')) {
