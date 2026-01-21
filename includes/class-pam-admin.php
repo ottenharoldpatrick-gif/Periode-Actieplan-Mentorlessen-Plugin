@@ -276,9 +276,7 @@ class PAM_Admin {
             array('name' => 'Periode 2', 'active' => false),
             array('name' => 'Periode 3', 'active' => false),
             array('name' => 'Periode 4', 'active' => false)
-    
-    public function ajax_save_settings() {
-                        );
+            );
             update_option('pam_periods', $periods);
         }
         
@@ -288,6 +286,9 @@ class PAM_Admin {
         
         include PAM_PLUGIN_DIR . 'templates/admin-settings.php';
     }
+    
+        
+        public function ajax_save_settings() {
         check_ajax_referer('pam_admin_nonce', 'nonce');
         
         if (!current_user_can('manage_options')) {
