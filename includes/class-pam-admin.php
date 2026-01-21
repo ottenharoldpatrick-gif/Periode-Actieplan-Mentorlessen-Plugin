@@ -262,17 +262,20 @@ class PAM_Admin {
         include PAM_PLUGIN_DIR . 'templates/admin-failures.php';
     }
     
+    
     public function render_settings_page() {
         $active_tab = isset($_GET['tab']) ? $_GET['tab'] : 'subjects';
-        
+    
         $subjects = get_option('pam_subjects', array());
         $periods = get_option('pam_periods', array());
-        $mentor_role = get_option('pam_mentor_role', 'teacher');
-        $email_template = get_option('pam_email_template', '');
-        $pdro_questions = get_option('pam_pdro_questions', array());
-        
-        include PAM_PLUGIN_DIR . 'templates/admin-settings.php';
-    }
+    
+    // TOEVOEGEN: Initialiseer periodes als ze nog niet bestaan
+    if (empty($periods)) {
+        $periods = array(
+            array('name' => 'Periode 1', 'active' => true),
+            array('name' => 'Periode 2', 'active' => false),
+            array('name' => 'Periode 3', 'active' => false),
+            array('name'
     
     public function ajax_save_settings() {
         check_ajax_referer('pam_admin_nonce', 'nonce');
