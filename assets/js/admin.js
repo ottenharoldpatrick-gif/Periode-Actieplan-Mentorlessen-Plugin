@@ -143,6 +143,9 @@ jQuery(document).ready(function($) {
                 $form.find('textarea[name="questions[]"]').each(function() {
                     formData.append('questions[]', $(this).val());
                 });
+                            $form.find('input[name="placeholders[]"]').each(function() {
+                formData.append('placeholders[]', $(this).val());
+            });
             }
             
             this.showMessage($message, pamAdminData.texts.saving, 'info');
