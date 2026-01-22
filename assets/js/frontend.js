@@ -171,7 +171,9 @@ jQuery(document).ready(function($) {
             const template = $('#pam-plan-template').html();
             
             // Fetch questions from data attribute or default
-            const questions = [
+            const questions = pamData.pdro_questions && pamData.pdro_questions.length > 0
+            ? pamData.pdro_questions
+            : [
                 'PLAN - Terugkijken: hoe heb je geleerd voor de laatste toets en wat ging goed / minder goed?',
                 'PLAN - Kies één duidelijk doel (SMART): welk cijfer wil je minimaal halen en op welke toets / in welke periode?',
                 'DO - Wat ga je precies anders doen? Noem minimaal twee concrete acties (wat, wanneer, hoe lang, met welk materiaal).',
