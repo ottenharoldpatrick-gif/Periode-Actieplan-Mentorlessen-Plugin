@@ -33,6 +33,7 @@ class PAM_Frontend {
             wp_localize_script('pam-frontend', 'pamData', array(
                 'ajax_url' => admin_url('admin-ajax.php'),
                 'nonce' => wp_create_nonce('pam_nonce'),
+                				'pdro_questions' => get_option('pam_pdro_questions', array()),
                 'texts' => array(
                     'saving' => __('Bezig met opslaan...', 'periode-actieplan'),
                     'saved' => __('Gegevens opgeslagen!', 'periode-actieplan'),
