@@ -203,6 +203,10 @@ if (!defined('ABSPATH')) {
                                 <strong><?php printf(__('Vraag %d', 'periode-actieplan'), $index + 1); ?></strong>
                             </label>
                             <textarea name="questions[]" rows="3" class="large-text"><?php echo esc_textarea($question); ?></textarea>
+                                                <label>
+                        <strong><?php _e('Voorbeeld tekst', 'periode-actieplan'); ?></strong>
+                        <input type="text" name="placeholders[]" class="large-text" placeholder="<?php esc_attr_e('Bijv: Mijn opbrengst voor Nederlands is..', 'periode-actieplan'); ?>" value="<?php echo isset($pdro_placeholders[$index]) ? esc_attr($pdro_placeholders[$index]) : ''; ?>">
+                    </label>
                         </div>
                     <?php endforeach; ?>
                     
