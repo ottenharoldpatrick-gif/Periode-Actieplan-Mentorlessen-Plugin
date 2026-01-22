@@ -269,16 +269,19 @@ class PAM_Admin {
         $subjects = get_option('pam_subjects', array());
         $periods = get_option('pam_periods', array());
     
-    // TOEVOEGEN: Initialiseer periodes als ze nog niet bestaan
-    if (empty($periods)) {
-        $periods = array(
-            array('name' => 'Periode 1', 'active' => true),
-            array('name' => 'Periode 2', 'active' => false),
-            array('name' => 'Periode 3', 'active' => false),
-            array('name' => 'Periode 4', 'active' => false)
-            );
-            update_option('pam_periods', $periods);
-        }
+// Verbeterde initialisatie
+$periods = get_option('pam_periods');
+
+// Controleer of $periods een geldige array is met inhoud
+if (!is_array($periods) || empty($periods) || count($periods) !== 4) {
+    $periods = array(
+        array('name' => 'Periode 1', 'active' => true),
+        array('name' => 'Periode 2', 'active' => false),
+        array('name' => 'Periode 3', 'active' => false),
+        array('name' => 'Periode 4', 'active' => false)
+    );
+    update_option('pam_periods', $periods);
+}
         
         $mentor_role = get_option('pam_mentor_role', 'teacher');
         $email_template = get_option('pam_email_template', '');
