@@ -286,6 +286,17 @@ if (!is_array($periods) || empty($periods) || count($periods) !== 4) {
         $mentor_role = get_option('pam_mentor_role', 'teacher');
         $email_template = get_option('pam_email_template', '');
         $pdro_questions = get_option('pam_pdro_questions', array());
+
+        	// Controleer of $pdro_questions een geldige array is met inhoud
+        	if (!is_array($pdro_questions) || empty($pdro_questions)) {
+                		$pdro_questions = array(
+                            			'Wat wilde je bereiken in deze periode? (Plan)',
+                            			'Wat heb je gedaan om je doel te bereiken? (Do)',
+                            			'Heb je je doel bereikt? Waarom wel/niet? (Review)',
+                            			'Wat ga je nu doen? Wat ga je anders doen? (Overall)'
+                            		);
+                		update_option('pam_pdro_questions', $pdro_questions);
+                	};
         
         include PAM_PLUGIN_DIR . 'templates/admin-settings.php';
     }
